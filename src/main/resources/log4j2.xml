@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+  <Appenders>
+    <Console name="STDOUT" target="SYSTEM_OUT">
+<!--         <PatternLayout pattern="current date-%d LEVEL-%-5p  Thread-[%t]  Method-%M()   Class name-%C   Message-%m%n"/> -->
+		<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p  [%t]  %C.%M#%L %m%n "/>
+<!-- 		%d{yyyy-MM-dd'T'HH:mm:ss.SSS} %-5p [%c] - %m%n -->
+    </Console>
+     <File name="MyFile" fileName="console.log">
+      <PatternLayout>
+        <Pattern>%d %p %c{1.} [%t] %m%n</Pattern>
+      </PatternLayout>
+    </File>
+    <Async name="Async">
+      <AppenderRef ref="MyFile"/>
+    </Async>
+  </Appenders>
+   <loggers>
+  <Logger name="org.apache.log4j.xml" level="debug"/>
+  <Logger name="java.util.logging" level="debug"/>
+    <root level="debug">
+      <appender-ref ref="STDOUT"/>
+      <appender-ref ref="Async"/>
+    </root>
+  </loggers>
+</Configuration>
