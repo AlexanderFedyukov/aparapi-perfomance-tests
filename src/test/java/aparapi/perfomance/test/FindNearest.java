@@ -14,44 +14,49 @@ import com.aparapi.internal.kernel.KernelManager;
 public class FindNearest {
 	private final static Logger logger = LoggerFactory.getLogger(FindNearest.class);
 
-	final int					amount = 1 << 16;
+	private  int					amount = 1 << 20;
 
 	private final KMapReducer kernel = new KMapReducer();
 
-	public FindNearest() {
-		// TODO Auto-generated constructor stub
+	public FindNearest(int amount) {
+	    this.amount=amount;
+	    
+	    kernel.data = new double[amount][2];
+        kernel.res = new double[amount][2];
+        kernel.pos = new int[amount];
+
+        IntStream.range(0, amount)
+        .parallel()
+        .forEach(p -> {
+            kernel.data[p][0] = Math.random();
+            kernel.data[p][1] = Math.random();
+        });
+
+        kernel.x = Math.random();
+        kernel.y = Math.random();
 	}
 
-	public FindNearest(final OpenCLDevice device, final EXECUTION_MODE mode) {
+	public void compute(final OpenCLDevice device, final EXECUTION_MODE mode) {
 		if (device != null)
-			logger.info("Execute on {} - {}", device.getShortDescription(),
-					device.getName());
+			logger.info("Execute on {} {} {}", device.getShortDescription(),					device.getName(), mode);
+		else
+		    logger.info("Execute on {}",mode);
 
+		logger.info("Sample size {}",amount);
+		
 		kernel.setExecutionMode(mode);
 
 		long t = System.currentTimeMillis();
-		kernel.data = new double[amount][2];
-		kernel.res = new double[amount][2];
-		kernel.pos = new int[amount];
-
-		IntStream.range(0, amount)
-		.parallel()
-		.forEach(p -> {
-			kernel.data[p][0] = Math.random();
-			kernel.data[p][1] = Math.random();
-		});
-
-		kernel.x = Math.random();
-		kernel.y = Math.random();
-
+		
 		logger.info("before {}", System.currentTimeMillis() - t);
-		t = System.currentTimeMillis();
+		long tmap = System.currentTimeMillis();
 
 		kernel.operType = 0;
 		kernel.execute(Range.create(device, amount));
 
-		logger.info("after map {}", System.currentTimeMillis() - t);
-		t = System.currentTimeMillis();
+		tmap=System.currentTimeMillis() - tmap;
+		logger.info("after map {}", tmap);
+		long treduce = System.currentTimeMillis();
 
 		kernel.operType = 1;
 
@@ -68,18 +73,13 @@ public class FindNearest {
 
 		kernel.execute(Range.create(device, kernel.divider));
 
-		logger.info("after reduce {}", System.currentTimeMillis() - t);
+		treduce=System.currentTimeMillis() - treduce;
+		logger.info("after reduce {}", treduce);
 		t = System.currentTimeMillis();
 
+		logger.info("STAT {} {} sample {} map time {} reduce time {}",mode,device!=null?device.getName():"JTP", amount,tmap,treduce);
+		
 		logger.info("nearest point for {};{} is {};{} ({})", kernel.x, kernel.y, kernel.data[kernel.pos[0]][0], kernel.data[kernel.pos[0]][1], kernel.res[kernel.pos[0]][0]);
-
-		// logger.info("device {} maxGroups {} maxDim {} maxWork {}",
-		// device.getShortDescription(), device.getMaxWorkGroupSize(),
-		// device.getMaxWorkItemDimensions(), device.getMaxWorkItemSize());
-
-		final StringBuilder builder = new StringBuilder();
-		KernelManager.instance().reportDeviceUsage(builder, true);
-		logger.info("{}", builder);
 
 		kernel.dispose();
 	}
